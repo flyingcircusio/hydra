@@ -397,9 +397,9 @@ static bool insertMatchingConstituents(const std::string & childJobName,
 {
     bool expansionFound = false;
     for (auto job = jobs.begin(); job != jobs.end(); job++) {
-        // If all jobs are selected by an aggregate job, select all
-        // jobs except itself.
-        if (childJobName == "*" && job.key() == jobName) {
+        // Never select the job itself as constituent. Trivial way
+        // to avoid obvious cycles.
+        if (job.key() == jobName) {
             continue;
         }
         auto jobName = job.key();

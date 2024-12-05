@@ -475,14 +475,14 @@ static void rewriteAggregates(nlohmann::json & jobs,
             auto drvPath = store->parseStorePath((std::string) job["drvPath"]);
             auto drv = store->readDerivation(drvPath);
 
-            for (auto & childJobName : aggregateJob.dependencies) {
-                auto childDrvPath = store->parseStorePath((std::string) jobs[childJobName]["drvPath"]);
-                auto childDrv = store->readDerivation(childDrvPath);
-                job["constituents"].push_back(store->printStorePath(childDrvPath));
-                drv.inputDrvs.map[childDrvPath].value = {childDrv.outputs.begin()->first};
-            }
-
             if (aggregateJob.brokenJobs.empty()) {
+                for (auto & childJobName : aggregateJob.dependencies) {
+                    auto childDrvPath = store->parseStorePath((std::string) jobs[childJobName]["drvPath"]);
+                    auto childDrv = store->readDerivation(childDrvPath);
+                    job["constituents"].push_back(store->printStorePath(childDrvPath));
+                    drv.inputDrvs.map[childDrvPath].value = {childDrv.outputs.begin()->first};
+                }
+
                 std::string drvName(drvPath.name());
                 assert(hasSuffix(drvName, drvExtension));
                 drvName.resize(drvName.size() - drvExtension.size());
@@ -517,6 +517,7 @@ static void rewriteAggregates(nlohmann::json & jobs,
         }
 
         if (!aggregateJob.brokenJobs.empty()) {
+            job.erase("constituents");
             std::stringstream ss;
             for (const auto& [jobName, error] : aggregateJob.brokenJobs) {
                 ss << jobName << ": " << error << "\n";

@@ -164,4 +164,30 @@ subtest "cycle check with globbing" => sub {
     ok(defined $builds->{"packages.constituentB"}, "'packages.constituentB' is part of the jobset evaluation");
 };
 
+subtest "partial error doesn't swallow other eval errors" => sub {
+    my $jobsetCtx = $ctx->makeJobset(
+        expression => 'constituents-partial-error.nix',
+    );
+    my $jobset = $jobsetCtx->{"jobset"};
+
+    my ($res, $stdout, $stderr) = captureStdoutStderr(60,
+        ("hydra-eval-jobset", $jobsetCtx->{"project"}->name, $jobset->name)
+    );
+
+    ok(utf8::decode($stderr), "Stderr output is UTF8-clean");
+
+    $jobset->discard_changes;  # refresh from DB
+
+    like(
+        $jobset->errormsg,
+        qr/in job ‘release’:\npkgs.*: constituent glob pattern had no matches/,
+        "eval error of 'release' is missing"
+    );
+    like(
+        $jobset->errormsg,
+        qr/in job ‘pkgs’:\nerror:\n.*error: you shall not pass/s,
+        "eval error of 'pkgs' is missing"
+    );
+};
+
 done_testing;
